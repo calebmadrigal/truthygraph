@@ -49,13 +49,11 @@ var makeColorMapper = function(minInput, maxInput) {
     return mapper;
 };
 
-var displayGraph = function(func, xMin, xMax, yMin, yMax) {
+var calculateFuncForWindow = function(func, xMin, xMax, yMin, yMax) {
   var canvas = document.getElementById('canvas');
   var context = canvas.getContext('2d');
   var canvasWidth = context.canvas.width;
   var canvasHeight = context.canvas.height;
-  var imageData = context.createImageData(canvasWidth, canvasHeight);
-  var pixelData = imageData.data;
 
   var pixel_to_x_mapper = makeLinearMapper([0, canvasWidth], [xMin, xMax], false);
   var pixel_to_y_mapper = makeLinearMapper([0, canvasHeight], [yMin, yMax], false);
@@ -80,6 +78,17 @@ var displayGraph = function(func, xMin, xMax, yMin, yMax) {
       pixelValues[(pixelY * canvasWidth) + pixelX] = result;
     }
   }
+
+  return {'pixelValues': pixelValues, 'max': maxValue, 'min': minValue};
+}
+
+var displayTruthyGraph = function(pixelValues, minValue, maxValue) {
+  var canvas = document.getElementById('canvas');
+  var context = canvas.getContext('2d');
+  var canvasWidth = context.canvas.width;
+  var canvasHeight = context.canvas.height;
+  var imageData = context.createImageData(canvasWidth, canvasHeight);
+  var pixelData = imageData.data;
 
   // Function to modify the value to make the graph look more interesting
   // We do this because the value is a measure of error, but we want more error
@@ -111,6 +120,38 @@ var displayGraph = function(func, xMin, xMax, yMin, yMax) {
   context.putImageData(imageData, 0, 0);
 };
 
+var displayBinaryGraph = function(pixelValues, truthThreshold) {
+  var canvas = document.getElementById('canvas');
+  var context = canvas.getContext('2d');
+  var canvasWidth = context.canvas.width;
+  var canvasHeight = context.canvas.height;
+  var imageData = context.createImageData(canvasWidth, canvasHeight);
+  var pixelData = imageData.data;
+
+  // Set the color for each pixel based on the values
+  for (var x = 0; x < canvasWidth; x++) {
+    for (var y = 0; y < canvasHeight; y++) {
+      // TODO: Flip y?
+      var value = pixelValues[y * canvasWidth + x];
+      if (value <= truthThreshold) {
+        color = [0, 0, 0];  // black
+      }
+      else {
+        color = [255, 255, 255];  // white
+      }
+
+      // Set pixel color channels
+      var pixelOffset = (canvasWidth * y + x) * 4;
+      pixelData[pixelOffset] = color[0];     // red
+      pixelData[pixelOffset + 1] = color[1]; // green
+      pixelData[pixelOffset + 2] = color[2]; // blue
+      pixelData[pixelOffset + 3] = 255;      // alpha
+    }
+  }
+
+  context.putImageData(imageData, 0, 0);
+};
+
 ///////////////////////////////////////////////////////////////////////////////////////// Parameters
 
 var xMin = -2;
@@ -124,7 +165,10 @@ var left_eq = function (x, y) { return Math.pow(y, 2); }
 var right_eq = function (x, y) { return Math.pow(x, 3) - x + 1; }
 var elliptic_curve = function (x, y) { return Math.abs(left_eq(x, y) - right_eq(x, y)); }
 
-displayGraph(elliptic_curve, xMin, xMax, yMin, yMax);
+var pixelValues = calculateFuncForWindow(elliptic_curve, xMin, xMax, yMin, yMax);
+displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'])
+//displayBinaryGraph(pixelValues['pixelValues'], 0.02)
+
 
 </script>
 
