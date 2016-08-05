@@ -70,16 +70,44 @@ var displayGraph = function(xMin, xMax, yMin, yMax, precision) {
 
   var x_to_pixel_mapper = makeLinearMapper([xMin, xMax], [0, canvasWidth]);
   var y_to_pixel_mapper = makeLinearMapper([yMin, yMax], [0, canvasHeight]);
-  var colorMapper = makeColorMapper(4098);
 
+  var minValue = 9999999;
+  var maxValue = -9999999;
+  var pixelValues = new Array(canvasWidth * canvasHeight);
+
+  // Calculate values for each pixel, and find the min and max values
   floatRange(xMin, xMax, precision).forEach(function (xVal) {
     floatRange(yMin, yMax, precision).forEach(function (yVal) {
       var result = elliptic_curve(xVal, yVal);
+      if (result > maxValue) {
+        maxValue = result;
+      }
+      if (result < minValue) {
+        minValue = result;
+      }
 
       var x = x_to_pixel_mapper(xVal);
       var y = y_to_pixel_mapper(yVal);
 
-      color = colorMapper(Math.pow(16 - result, 3));
+      pixelValues[(y * canvasWidth) + x] = result;
+    });
+  });
+
+  // Function to modify the value to make the graph look more interesting
+  var valueModifier = function (value) {
+    return Math.pow(maxValue+1 - value, 9);
+  }
+
+  // Determine the color scale based on the min and max values
+  // TODO: make color mapper go from minValue to maxValue
+  var colorMapper = makeColorMapper(valueModifier(minValue));
+
+  // Set the color for each pixel based on the values
+  for (var x = 0; x < canvasWidth; x++) {
+    for (var y = 0; y < canvasHeight; y++) {
+      // TODO: Flip y?
+      var value = pixelValues[y * canvasWidth + x];
+      color = colorMapper(valueModifier(value));
 
       // Set pixel color channels
       var pixelOffset = (canvasWidth * y + x) * 4;
@@ -87,11 +115,10 @@ var displayGraph = function(xMin, xMax, yMin, yMax, precision) {
       pixelData[pixelOffset + 1] = color[1]; // green
       pixelData[pixelOffset + 2] = color[2]; // blue
       pixelData[pixelOffset + 3] = 255;      // alpha
-    });
-  });
+    }
+  }
 
   context.putImageData(imageData, 0, 0);
-
 };
 
 ///////////////////////////////////////////////////////////////////////////////////////// Parameters
