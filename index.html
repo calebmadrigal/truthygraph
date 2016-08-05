@@ -196,7 +196,7 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue) {
   // We do this because the value is a measure of error, but we want more error
   // to look like a more intense value on the graph
   var valueModifier = function (value) {
-    return Math.pow(maxValue+1 - value, 50);
+    return Math.pow(maxValue+1 - value, 20);
   }
 
   // Determine the color scale based on the min and max values
