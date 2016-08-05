@@ -1,10 +1,95 @@
 <html><head>
   <title>Truthy Graphy</title>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.3.0/math.min.js"></script>
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/picnicss/6.1.2/picnic.min.css">
+  <style>
+    .container {
+      width: 700px;
+      margin: 0 auto;
+    }
+
+    body {
+      padding-top: 10px;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #333;
+    }
+
+    .title {
+      font-family: "Raleway", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 300%;
+      letter-spacing: 4px;
+      font-weight: 100;
+      color: #000064;
+    }
+
+    /* Footer */
+    .footer {
+      margin-top: 50px;
+      text-align: center;
+      color: #AAAAAA;
+      font-size: .8em;
+    }
+
+    .footer-container {
+      width: 200px;
+      margin-left: auto;
+      margin-right: auto;
+      font-weight: 200;
+      margin-bottom: 40px;
+    }
+
+    .footer hr {
+      border: 0;
+      border-bottom: 1px dashed #ccc;
+      background: #999;
+      margin: 2px;
+    }
+
+    .footer a, .footer a:visited, .footer a:hover {
+      color: #000064;
+    }
+  </style>
 </head><body>
 
-<canvas id="canvas" width="700" height="700">
-  Your browser does not support HTML5 Canvas.
-</canvas>
+<div class="container">
+  <article class="card">
+    <header>
+      <h1 class="title">Truthy Graphy</h1>
+    </header>
+    <footer>
+      <fieldset class="flex two">
+        <label>
+          <!-- <span class="checkable">Equation</span> -->
+          <input type="equation" id="equation" placeholder="y^2 = x^3 - x + 1" class="picnicss">
+        </label>
+
+        <label>
+          <input type="radio" name="graph-type" value="truthy" checked>
+          <span class="checkable">Graph Truthy</span>
+        </label>
+
+        <label>
+          <input type="radio" name="graph-type" value="boolean">
+          <span class="checkable">Graph Boolean</span>
+        </label>
+      </fieldset>
+    </footer>
+  </article>
+
+  <canvas id="canvas" width="700" height="700">
+    Your browser does not support HTML5 Canvas.
+  </canvas>
+</div>
+
+<div class="footer">
+  <div class="footer-container">
+      <span>
+        <a href="https://github.com/hypervault/hypervault.github.io">View on Github</a>
+      </span>
+    <hr />
+    <span>Project by <a href="http://calebmadrigal.com">Caleb Madrigal</a></span>
+  </div>
+</div>
 
 <script type="text/javascript">
 
@@ -33,6 +118,19 @@ var makeLinearMapper = function(inRange, outRange, intOut) {
 
   return linearMapper;
 };
+
+var parseEquationString = function(eq_str) {
+  var split_result = eq_str.split("=");
+  if (split_result.length != 2) {
+    return null;
+  }
+
+  var left_eq = math.eval('f(x, y) = ' + split_result[0], {});
+  var right_eq = math.eval('f(x, y) = ' + split_result[1], {});
+  var error_func = function (x, y) { return Math.abs(left_eq(x, y) - right_eq(x, y)); }
+
+  return error_func;
+}
 
 ////////////////////////////////////////////////////////////////////////////////////// Display stuff
 
@@ -94,7 +192,7 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue) {
   // We do this because the value is a measure of error, but we want more error
   // to look like a more intense value on the graph
   var valueModifier = function (value) {
-    return Math.pow(maxValue+1 - value, 9);
+    return Math.pow(maxValue+1 - value, 50);
   }
 
   // Determine the color scale based on the min and max values
@@ -152,24 +250,54 @@ var displayBinaryGraph = function(pixelValues, truthThreshold) {
   context.putImageData(imageData, 0, 0);
 };
 
-///////////////////////////////////////////////////////////////////////////////////////// Parameters
+/////////////////////////////////////////////////////////////////////////////////////////////// Main
 
-var xMin = -2;
-var xMax = 3;
-var yMin = -2.5;
-var yMax = 2.5;
+var equation_input = document.querySelector('#equation');
+var radios = document.querySelectorAll('input[type=radio][name="graph-type"]');
+var graph_truthy = true;
 
-// Elliptic curve equation: y**2 = x**3 + ax + b
-// Example curve (a=-1, b=1): y**2 = x**3 − x + 1
-var left_eq = function (x, y) { return Math.pow(y, 2); }
-var right_eq = function (x, y) { return Math.pow(x, 3) - x + 1; }
-var elliptic_curve = function (x, y) { return Math.abs(left_eq(x, y) - right_eq(x, y)); }
+var getInputAndGraph = function() {
+  try {
+    var equationToGraph = parseEquationString(equation_input.value);
+  }
+  catch(err) {
+    return;
+  }
 
-var pixelValues = calculateFuncForWindow(elliptic_curve, xMin, xMax, yMin, yMax);
-displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'])
-//displayBinaryGraph(pixelValues['pixelValues'], 0.02)
+  if (equationToGraph) {
+    var xMin = -2;
+    var xMax = 3;
+    var yMin = -2.5;
+    var yMax = 2.5;
 
+    var pixelValues = calculateFuncForWindow(equationToGraph, xMin, xMax, yMin, yMax);
+
+    if (graph_truthy) {
+      displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'])
+    } else {
+      displayBinaryGraph(pixelValues['pixelValues'], 0.015)
+    }
+  }
+}
+
+function graphTruthyChangeHandler(event) {
+   if ( this.value === 'truthy' ) {
+     graph_truthy = true;
+   } else {
+     graph_truthy = false;
+   }
+   getInputAndGraph();
+}
+
+Array.prototype.forEach.call(radios, function(radio) {
+   radio.addEventListener('change', graphTruthyChangeHandler);
+});
+
+equation_input.addEventListener('input', getInputAndGraph);
+
+// Initial conditions
+equation_input.value = "y^2=x^3 - x + 1";
+getInputAndGraph();
 
 </script>
-
 </body></html>
