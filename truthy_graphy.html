@@ -1,0 +1,109 @@
+<html><head>
+  <title>Truthy Graphy</title>
+</head><body>
+
+<canvas id="canvas" width="700" height="700">
+  Your browser does not support HTML5 Canvas.
+</canvas>
+
+<script type="text/javascript">
+
+////////////////////////////////////////////////////////////////////////////////////  Math functions
+
+// Example usage: floatRange(0, 1, 0.1) -> [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1]
+var floatRange = function(start, end, precision) {
+  var range = [];
+  for (var i = Math.round(start/precision); i <= Math.round(end/precision); i++) {
+    range.push(i * precision);
+  }
+  return range;
+};
+
+// Returns a function maps from the inRange to the outRange
+var makeLinearMapper = function(inRange, outRange) {
+  var inDelta = inRange[1] - inRange[0];
+  var outDelta = outRange[1] - outRange[0];
+  // y = mx + b (m = slope, b = y-intersect)
+  var m = (outDelta / inDelta);
+  // To find b: b = y - mx
+  // Just plug in first item of each range
+  var b = outRange[0] - m * inRange[0];
+
+  var linearMapper = function(val) {
+    return Math.round(m * val + b);
+  }
+
+  return linearMapper;
+};
+
+// Elliptic curve equation: y**2 = x**3 + ax + b
+// Example curve (a=-1, b=1): y**2 = x**3 − x + 1
+var elliptic_curve = function(x, y, consider_equal_threashold=0.1) {
+    var left_eq = Math.pow(y, 2)
+    var right_eq = Math.pow(x, 3) - x + 1
+    //return abs(left_eq - right_eq) < consider_equal_threashold
+    return Math.abs(left_eq - right_eq)
+}
+
+////////////////////////////////////////////////////////////////////////////////////// Display stuff
+
+var makeColorMapper = function(maxInput) {
+    var colorChannelRange = [0, 255];
+    var colorMapper = makeLinearMapper([0, maxInput], colorChannelRange);
+
+    var mapper = function(val) {
+        var colorVal = colorMapper(val);
+        var rgbVals = [colorVal, colorVal, 100];
+        return rgbVals;
+    };
+
+    return mapper;
+};
+
+var displayGraph = function(xMin, xMax, yMin, yMax, precision) {
+  var canvas = document.getElementById('canvas');
+  var context = canvas.getContext('2d');
+  var canvasWidth = context.canvas.width;
+  var canvasHeight = context.canvas.height;
+  var imageData = context.createImageData(canvasWidth, canvasHeight);
+  var pixelData = imageData.data;
+
+  var x_to_pixel_mapper = makeLinearMapper([xMin, xMax], [0, canvasWidth]);
+  var y_to_pixel_mapper = makeLinearMapper([yMin, yMax], [0, canvasHeight]);
+  var colorMapper = makeColorMapper(4098);
+
+  floatRange(xMin, xMax, precision).forEach(function (xVal) {
+    floatRange(yMin, yMax, precision).forEach(function (yVal) {
+      var result = elliptic_curve(xVal, yVal);
+
+      var x = x_to_pixel_mapper(xVal);
+      var y = y_to_pixel_mapper(yVal);
+
+      color = colorMapper(Math.pow(16 - result, 3));
+
+      // Set pixel color channels
+      var pixelOffset = (canvasWidth * y + x) * 4;
+      pixelData[pixelOffset] = color[0];     // red
+      pixelData[pixelOffset + 1] = color[1]; // green
+      pixelData[pixelOffset + 2] = color[2]; // blue
+      pixelData[pixelOffset + 3] = 255;      // alpha
+    });
+  });
+
+  context.putImageData(imageData, 0, 0);
+
+};
+
+///////////////////////////////////////////////////////////////////////////////////////// Parameters
+
+var xMin = -2;
+var xMax = 3;
+var yMin = -2.5;
+var yMax = 2.5;
+var precision = 0.002;
+
+displayGraph(xMin, xMax, yMin, yMax, precision);
+
+</script>
+
+</body></html>
