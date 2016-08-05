@@ -47,9 +47,9 @@ var elliptic_curve = function(x, y, consider_equal_threashold=0.1) {
 
 ////////////////////////////////////////////////////////////////////////////////////// Display stuff
 
-var makeColorMapper = function(maxInput) {
+var makeColorMapper = function(minInput, maxInput) {
     var colorChannelRange = [0, 255];
-    var colorMapper = makeLinearMapper([0, maxInput], colorChannelRange);
+    var colorMapper = makeLinearMapper([minInput, maxInput], colorChannelRange);
 
     var mapper = function(val) {
         var colorVal = colorMapper(val);
@@ -94,13 +94,15 @@ var displayGraph = function(xMin, xMax, yMin, yMax, precision) {
   });
 
   // Function to modify the value to make the graph look more interesting
+  // We do this because the value is a measure of error, but we want more error
+  // to look like a more intense value on the graph
   var valueModifier = function (value) {
     return Math.pow(maxValue+1 - value, 9);
   }
 
   // Determine the color scale based on the min and max values
   // TODO: make color mapper go from minValue to maxValue
-  var colorMapper = makeColorMapper(valueModifier(minValue));
+  var colorMapper = makeColorMapper(valueModifier(maxValue), valueModifier(minValue));
 
   // Set the color for each pixel based on the values
   for (var x = 0; x < canvasWidth; x++) {
