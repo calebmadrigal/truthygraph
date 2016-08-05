@@ -10,17 +10,8 @@
 
 ////////////////////////////////////////////////////////////////////////////////////  Math functions
 
-// Example usage: floatRange(0, 1, 0.1) -> [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1]
-var floatRange = function(start, end, precision) {
-  var range = [];
-  for (var i = Math.round(start/precision); i <= Math.round(end/precision); i++) {
-    range.push(i * precision);
-  }
-  return range;
-};
-
 // Returns a function maps from the inRange to the outRange
-var makeLinearMapper = function(inRange, outRange) {
+var makeLinearMapper = function(inRange, outRange, intOut) {
   var inDelta = inRange[1] - inRange[0];
   var outDelta = outRange[1] - outRange[0];
   // y = mx + b (m = slope, b = y-intersect)
@@ -29,27 +20,25 @@ var makeLinearMapper = function(inRange, outRange) {
   // Just plug in first item of each range
   var b = outRange[0] - m * inRange[0];
 
-  var linearMapper = function(val) {
-    return Math.round(m * val + b);
+  if (intOut) {
+    var linearMapper = function(val) {
+      return Math.round(m * val + b);
+    }
+  }
+  else {
+    var linearMapper = function(val) {
+      return m * val + b;
+    }
   }
 
   return linearMapper;
 };
 
-// Elliptic curve equation: y**2 = x**3 + ax + b
-// Example curve (a=-1, b=1): y**2 = x**3 − x + 1
-var elliptic_curve = function(x, y, consider_equal_threashold=0.1) {
-    var left_eq = Math.pow(y, 2)
-    var right_eq = Math.pow(x, 3) - x + 1
-    //return abs(left_eq - right_eq) < consider_equal_threashold
-    return Math.abs(left_eq - right_eq)
-}
-
 ////////////////////////////////////////////////////////////////////////////////////// Display stuff
 
 var makeColorMapper = function(minInput, maxInput) {
     var colorChannelRange = [0, 255];
-    var colorMapper = makeLinearMapper([minInput, maxInput], colorChannelRange);
+    var colorMapper = makeLinearMapper([minInput, maxInput], colorChannelRange, true);
 
     var mapper = function(val) {
         var colorVal = colorMapper(val);
@@ -60,7 +49,7 @@ var makeColorMapper = function(minInput, maxInput) {
     return mapper;
 };
 
-var displayGraph = function(xMin, xMax, yMin, yMax, precision) {
+var displayGraph = function(func, xMin, xMax, yMin, yMax) {
   var canvas = document.getElementById('canvas');
   var context = canvas.getContext('2d');
   var canvasWidth = context.canvas.width;
@@ -68,17 +57,19 @@ var displayGraph = function(xMin, xMax, yMin, yMax, precision) {
   var imageData = context.createImageData(canvasWidth, canvasHeight);
   var pixelData = imageData.data;
 
-  var x_to_pixel_mapper = makeLinearMapper([xMin, xMax], [0, canvasWidth]);
-  var y_to_pixel_mapper = makeLinearMapper([yMin, yMax], [0, canvasHeight]);
+  var pixel_to_x_mapper = makeLinearMapper([0, canvasWidth], [xMin, xMax], false);
+  var pixel_to_y_mapper = makeLinearMapper([0, canvasHeight], [yMin, yMax], false);
 
   var minValue = 9999999;
   var maxValue = -9999999;
   var pixelValues = new Array(canvasWidth * canvasHeight);
 
   // Calculate values for each pixel, and find the min and max values
-  floatRange(xMin, xMax, precision).forEach(function (xVal) {
-    floatRange(yMin, yMax, precision).forEach(function (yVal) {
-      var result = elliptic_curve(xVal, yVal);
+  for (var pixelX = 0; pixelX < canvasWidth; pixelX++) {
+    for (var pixelY = 0; pixelY < canvasHeight; pixelY++) {
+      var x = pixel_to_x_mapper(pixelX);
+      var y = pixel_to_y_mapper(pixelY);
+      var result = func(x, y);
       if (result > maxValue) {
         maxValue = result;
       }
@@ -86,12 +77,9 @@ var displayGraph = function(xMin, xMax, yMin, yMax, precision) {
         minValue = result;
       }
 
-      var x = x_to_pixel_mapper(xVal);
-      var y = y_to_pixel_mapper(yVal);
-
-      pixelValues[(y * canvasWidth) + x] = result;
-    });
-  });
+      pixelValues[(pixelY * canvasWidth) + pixelX] = result;
+    }
+  }
 
   // Function to modify the value to make the graph look more interesting
   // We do this because the value is a measure of error, but we want more error
@@ -129,9 +117,14 @@ var xMin = -2;
 var xMax = 3;
 var yMin = -2.5;
 var yMax = 2.5;
-var precision = 0.002;
 
-displayGraph(xMin, xMax, yMin, yMax, precision);
+// Elliptic curve equation: y**2 = x**3 + ax + b
+// Example curve (a=-1, b=1): y**2 = x**3 − x + 1
+var left_eq = function (x, y) { return Math.pow(y, 2); }
+var right_eq = function (x, y) { return Math.pow(x, 3) - x + 1; }
+var elliptic_curve = function (x, y) { return Math.abs(left_eq(x, y) - right_eq(x, y)); }
+
+displayGraph(elliptic_curve, xMin, xMax, yMin, yMax);
 
 </script>
 
