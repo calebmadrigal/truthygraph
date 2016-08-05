@@ -158,7 +158,7 @@ var calculateFuncForWindow = function(func, xMin, xMax, yMin, yMax) {
   var canvasHeight = context.canvas.height;
 
   var pixel_to_x_mapper = makeLinearMapper([0, canvasWidth], [xMin, xMax], false);
-  var pixel_to_y_mapper = makeLinearMapper([0, canvasHeight], [yMin, yMax], false);
+  var pixel_to_y_mapper = makeLinearMapper([canvasHeight, 0], [yMin, yMax], false);
 
   var minValue = 9999999;
   var maxValue = -9999999;
@@ -206,7 +206,6 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue) {
   // Set the color for each pixel based on the values
   for (var x = 0; x < canvasWidth; x++) {
     for (var y = 0; y < canvasHeight; y++) {
-      // TODO: Flip y?
       var value = pixelValues[y * canvasWidth + x];
       color = colorMapper(valueModifier(value));
 
@@ -233,7 +232,6 @@ var displayBinaryGraph = function(pixelValues, truthThreshold) {
   // Set the color for each pixel based on the values
   for (var x = 0; x < canvasWidth; x++) {
     for (var y = 0; y < canvasHeight; y++) {
-      // TODO: Flip y?
       var value = pixelValues[y * canvasWidth + x];
       if (value <= truthThreshold) {
         color = [0, 0, 0];  // black
@@ -269,10 +267,10 @@ var getInputAndGraph = function() {
   }
 
   if (equationToGraph) {
-    var xMin = -2;
+    var xMin = -3;
     var xMax = 3;
-    var yMin = -2.5;
-    var yMax = 2.5;
+    var yMin = -3;
+    var yMax = 3;
 
     var pixelValues = calculateFuncForWindow(equationToGraph, xMin, xMax, yMin, yMax);
 
