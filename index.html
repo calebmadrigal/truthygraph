@@ -1,7 +1,8 @@
 <html><head>
   <title>Truthy Graphy</title>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.3.0/math.min.js"></script>
-  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/picnicss/6.1.2/picnic.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picnic/6.1.2/picnic.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.5.1/nouislider.min.css">
   <style>
     .container {
       width: 702px;
@@ -52,6 +53,14 @@
     #canvas {
       border: 1px solid #ccc;
     }
+
+    .radio-fieldset {
+      margin: 7px 0px;
+    }
+
+    /*#fuzzy-slider {
+      margin-bottom: 30px;
+    }*/
   </style>
 </head><body>
 
@@ -61,22 +70,48 @@
       <h1 class="title">Truthy Graphy</h1>
     </header>
     <footer>
-      <fieldset class="flex two">
-        <label>
-          <!-- <span class="checkable">Equation</span> -->
-          <input type="equation" id="equation" placeholder="y^2 = x^3 - x + 1" class="picnicss">
-        </label>
+      <div class="flex two">
+        <div>
+          <label>
+            <span>Equation</span>
+            <input type="equation" id="equation" placeholder="y^2 = x^3 - x + 1">
+          </label>
 
-        <label>
-          <input type="radio" name="graph-type" value="truthy" checked>
-          <span class="checkable">Graph Truthy</span>
-        </label>
+          <fieldset class="radio-fieldset">
+            <label>
+              <input type="radio" name="graph-type" value="truthy" checked>
+              <span class="checkable">Graph Truthy</span>
+            </label>
 
-        <label>
-          <input type="radio" name="graph-type" value="boolean">
-          <span class="checkable">Graph Boolean</span>
-        </label>
-      </fieldset>
+            <label>
+              <input type="radio" name="graph-type" value="boolean">
+              <span class="checkable">Graph Boolean</span>
+            </label>
+          </fieldset>
+
+          <label>
+            <span class="checkable">Fuzzy Level</span>
+            <div id="fuzzy-slider"></div>
+          </label>
+        </div>
+
+        <!-- <div>
+          <article class="card">
+            <header>
+              <h5>Examples</h5>
+            </header>
+            <footer>
+              <a href="#">y=x^2</a>
+              <span>y=x^3-2x</span>
+              <span>y=sin(3x)</span>
+              <span>x = y^2 - 2</span>
+              <span>x^2/2+y^2=3</span>
+            </footer>
+          </article>
+        </div> -->
+      </div>
+
+
     </footer>
   </article>
 
@@ -95,6 +130,7 @@
   </div>
 </div>
 
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.5.1/nouislider.min.js"></script>
 <script type="text/javascript">
 
 ////////////////////////////////////////////////////////////////////////////////////  Math functions
@@ -184,7 +220,7 @@ var calculateFuncForWindow = function(func, xMin, xMax, yMin, yMax) {
   return {'pixelValues': pixelValues, 'max': maxValue, 'min': minValue};
 }
 
-var displayTruthyGraph = function(pixelValues, minValue, maxValue) {
+var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue) {
   var canvas = document.getElementById('canvas');
   var context = canvas.getContext('2d');
   var canvasWidth = context.canvas.width;
@@ -196,7 +232,7 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue) {
   // We do this because the value is a measure of error, but we want more error
   // to look like a more intense value on the graph
   var valueModifier = function (value) {
-    return Math.pow(maxValue+1 - value, 20);
+    return Math.pow(maxValue - value, fuzzyValue);
   }
 
   // Determine the color scale based on the min and max values
@@ -254,9 +290,12 @@ var displayBinaryGraph = function(pixelValues, truthThreshold) {
 
 /////////////////////////////////////////////////////////////////////////////////////////////// Main
 
+var graph_truthy = true;
+var fuzzy_value = 20;
+
 var equation_input = document.querySelector('#equation');
 var radios = document.querySelectorAll('input[type=radio][name="graph-type"]');
-var graph_truthy = true;
+var fuzzy_slider = document.getElementById('fuzzy-slider');
 
 var getInputAndGraph = function() {
   try {
@@ -275,12 +314,29 @@ var getInputAndGraph = function() {
     var pixelValues = calculateFuncForWindow(equationToGraph, xMin, xMax, yMin, yMax);
 
     if (graph_truthy) {
-      displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'])
+      displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'], fuzzy_value);
     } else {
-      displayBinaryGraph(pixelValues['pixelValues'], 0.015)
+      displayBinaryGraph(pixelValues['pixelValues'], 0.02);
     }
   }
 }
+
+noUiSlider.create(fuzzy_slider, {
+	start: [200 - 20],
+	range: { min: 1, max: 200 },
+  step: 1,
+  connect: false,
+  // pips: { // Show a scale with the slider
+	// 	mode: 'count',
+	// 	values: 8,
+  //   density: 2
+	// }
+});
+
+fuzzy_slider.noUiSlider.on('update', function(value) {
+  fuzzy_value = 201 - parseInt(value);
+	getInputAndGraph();
+});
 
 function graphTruthyChangeHandler(event) {
    if ( this.value === 'truthy' ) {
@@ -302,4 +358,5 @@ equation_input.value = "y^2=x^3 - x + 1";
 getInputAndGraph();
 
 </script>
+
 </body></html>
