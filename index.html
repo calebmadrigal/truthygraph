@@ -93,6 +93,9 @@
             <span class="checkable">Fuzzy Level</span>
             <div id="fuzzy-slider"></div>
           </label>
+
+          <button id="zoom-in-btn">Zoom In</button>
+          <button id="zoom-out-btn">Zoom Out</button>
         </div>
 
         <!-- <div>
@@ -115,10 +118,11 @@
     </footer>
   </article>
 
-  <canvas id="canvas" width="700" height="700">
-    Your browser does not support HTML5 Canvas.
-  </canvas>
 </div>
+
+<canvas id="canvas" width="1200" height="700">
+  Your browser does not support HTML5 Canvas.
+</canvas>
 
 <div class="footer">
   <div class="footer-container">
@@ -269,7 +273,7 @@ var displayBinaryGraph = function(pixelValues, truthThreshold) {
   for (var x = 0; x < canvasWidth; x++) {
     for (var y = 0; y < canvasHeight; y++) {
       var value = pixelValues[y * canvasWidth + x];
-      if (value <= truthThreshold) {
+      if (Math.pow(value, 2) <= truthThreshold) {
         color = [0, 0, 0];  // black
       }
       else {
@@ -288,10 +292,54 @@ var displayBinaryGraph = function(pixelValues, truthThreshold) {
   context.putImageData(imageData, 0, 0);
 };
 
+var getHeightToWidthMultiplier = function(xWidth, yWidth) {
+  return xWidth / yWidth;
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////// Main
+var canvas = document.getElementById('canvas');
+var context = canvas.getContext('2d');
 
 var graph_truthy = true;
 var fuzzy_value = 20;
+
+var xCenter = 0;
+var yCenter = 0;
+
+var yWidth = 6;
+var xWidth = yWidth * getHeightToWidthMultiplier(context.canvas.width, context.canvas.height);
+
+var getXMin = function (xWidth, xCenter) {
+  return -1 * xWidth / 2 + xCenter;
+}
+
+var getXMax = function (xWidth, xCenter) {
+  return xWidth / 2 + xCenter;
+}
+
+var getYMin = function (yWidth, yCenter) {
+  return -1 * yWidth / 2 + yCenter;
+}
+
+var getYMax = function (yWidth, yCenter) {
+  return yWidth / 2 + yCenter;
+}
+
+var xMin = getXMin(xWidth, xCenter);
+var xMax = getXMax(xWidth, xCenter);
+var yMin = getYMin(yWidth, yCenter);
+var yMax = getYMax(yWidth, yCenter);
+
+var recalculateWindows = function(xCenter, yCenter, yWidth) {
+  // Recalculate xWidth based on yWidth
+  xWidth = yWidth * getHeightToWidthMultiplier(context.canvas.width, context.canvas.height);
+
+  // Recalculate x and y min and max based on window size and center
+  xMin = getXMin(xWidth, xCenter);
+  xMax = getXMax(xWidth, xCenter);
+  yMin = getYMin(yWidth, yCenter);
+  yMax = getYMax(yWidth, yCenter);
+}
 
 var equation_input = document.querySelector('#equation');
 var radios = document.querySelectorAll('input[type=radio][name="graph-type"]');
@@ -306,17 +354,12 @@ var getInputAndGraph = function() {
   }
 
   if (equationToGraph) {
-    var xMin = -3;
-    var xMax = 3;
-    var yMin = -3;
-    var yMax = 3;
-
     var pixelValues = calculateFuncForWindow(equationToGraph, xMin, xMax, yMin, yMax);
 
     if (graph_truthy) {
       displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'], fuzzy_value);
     } else {
-      displayBinaryGraph(pixelValues['pixelValues'], 0.02);
+      displayBinaryGraph(pixelValues['pixelValues'], 0.0005);
     }
   }
 }
@@ -337,6 +380,21 @@ fuzzy_slider.noUiSlider.on('update', function(value) {
   fuzzy_value = 201 - parseInt(value);
 	getInputAndGraph();
 });
+
+var zoomIn = function() {
+  yWidth = yWidth * 1.2;
+  recalculateWindows(xCenter, yCenter, yWidth);
+  getInputAndGraph();
+};
+
+var zoomOut = function() {
+  yWidth = yWidth * 0.833;
+  recalculateWindows(xCenter, yCenter, yWidth);
+  getInputAndGraph();
+};
+
+document.getElementById('zoom-in-btn').onclick = zoomIn;
+document.getElementById('zoom-out-btn').onclick = zoomOut;
 
 function graphTruthyChangeHandler(event) {
    if ( this.value === 'truthy' ) {
