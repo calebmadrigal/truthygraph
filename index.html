@@ -94,8 +94,8 @@
             <div id="fuzzy-slider"></div>
           </label>
 
-          <button id="zoom-in-btn">Zoom In</button>
-          <button id="zoom-out-btn">Zoom Out</button>
+          <button id="zoom-in-btn">+</button>
+          <button id="zoom-out-btn">-</button>
         </div>
 
         <!-- <div>
@@ -382,19 +382,56 @@ fuzzy_slider.noUiSlider.on('update', function(value) {
 });
 
 var zoomIn = function() {
-  yWidth = yWidth * 1.2;
+  yWidth = yWidth * 0.833;
   recalculateWindows(xCenter, yCenter, yWidth);
   getInputAndGraph();
 };
 
 var zoomOut = function() {
-  yWidth = yWidth * 0.833;
+  yWidth = yWidth * 1.2;
   recalculateWindows(xCenter, yCenter, yWidth);
   getInputAndGraph();
 };
 
 document.getElementById('zoom-in-btn').onclick = zoomIn;
 document.getElementById('zoom-out-btn').onclick = zoomOut;
+
+var panGraph = function(xOffsetPixels, yOffsetPixels) {
+  // First, we have to convert the offset in pixels into the offset in our graphing window
+  var xOffset = xOffsetPixels * (xWidth / context.canvas.width);
+  var yOffset = yOffsetPixels * (yWidth / context.canvas.height);
+  xCenter = xCenter - xOffset;
+  yCenter = yCenter + yOffset;  // Due to flipped y, negate yOffset (and -1*-1 = 1)
+  recalculateWindows(xCenter, yCenter, yWidth);
+  getInputAndGraph();
+}
+
+var mouseIsDown = false;
+var dragStart = {};
+var dragStop = {};
+
+canvas.onmousedown = function(e){
+    dragStart.x = e.x;
+    dragStart.y = e.y;
+    mouseIsDown = true;
+}
+canvas.onmouseup = function(e){
+    mouseIsDown = false;
+
+    dragStop.x = e.x;
+    dragStop.y = e.y;
+
+    console.log('offset = ', dragStop.x - dragStart.x, dragStop.y - dragStart.y);
+    panGraph(dragStop.x - dragStart.x, dragStop.y - dragStart.y);
+}
+
+canvas.onmousemove = function(e){
+    if(!mouseIsDown) return;
+
+    dragStop.x = e.x;
+    dragStop.y = e.y;
+    return false;
+}
 
 function graphTruthyChangeHandler(event) {
    if ( this.value === 'truthy' ) {
