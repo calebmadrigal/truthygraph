@@ -52,6 +52,7 @@
 
     #canvas {
       border: 1px solid #ccc;
+      cursor: move;
     }
 
     .radio-fieldset {
@@ -118,11 +119,13 @@
     </footer>
   </article>
 
+  <canvas id="canvas" width="700" height="700">
+    Your browser does not support HTML5 Canvas.
+  </canvas>
+
 </div>
 
-<canvas id="canvas" width="1200" height="700">
-  Your browser does not support HTML5 Canvas.
-</canvas>
+
 
 <div class="footer">
   <div class="footer-container">
@@ -296,6 +299,20 @@ var getHeightToWidthMultiplier = function(xWidth, yWidth) {
   return xWidth / yWidth;
 }
 
+////////////////////////////////////////////////////////////////////////////////// Utility Functions
+
+function getParameterByName(name, url) {
+  // Copied from:
+  // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+  if (!url) url = window.location.href;
+  name = name.replace(/[\[\]]/g, "\\$&");
+  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+      results = regex.exec(url);
+  if (!results) return null;
+  if (!results[2]) return '';
+  return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
 /////////////////////////////////////////////////////////////////////////////////////////////// Main
 var canvas = document.getElementById('canvas');
 var context = canvas.getContext('2d');
@@ -448,8 +465,17 @@ Array.prototype.forEach.call(radios, function(radio) {
 
 equation_input.addEventListener('input', getInputAndGraph);
 
+// Try to get equation from url
+var urlFragmentId = window.location.hash.substr(1);
+var eqFromUrl = getParameterByName('eq', urlFragmentId);
+
 // Initial conditions
-equation_input.value = "y^2=x^3 - x + 1";
+if (eqFromUrl) {
+  equation_input.value = eqFromUrl;
+} else {
+  equation_input.value = "y^2=x^3 - x + 1";
+}
+
 getInputAndGraph();
 
 </script>
