@@ -9,6 +9,8 @@
       width:  100%;
       height: 100%;
       margin: 0px;
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #333;
     }
 
     #main {
@@ -19,7 +21,6 @@
 
     #controls {
       width: 250px;
-      /*height: 300px;*/
       z-index: 10;  /* <- higher than your canvases if it needs to go on top */
       position: absolute;
       /*border: 1px solid black;*/
@@ -31,12 +32,6 @@
       color: white;
       font-weight: lighter;
       letter-spacing: 1px;
-    }
-
-    body {
-      /*padding-top: 10px;*/
-      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-      color: #333;
     }
 
     .title {
@@ -66,11 +61,9 @@
       border: 1px solid #ccc;
       cursor: move;
       float: left;
-
       width: 100%;
       height:100%;
       position:absolute;
-      /*pointer-events: none;*/
     }
 
     .zoom-btn {
@@ -180,6 +173,34 @@ var getYMax = function (yWidth, yCenter) {
   return yWidth / 2 + yCenter;
 };
 
+var calculateFuncForWindow = function(func, xMin, xMax, yMin, yMax, canvasWidth, canvasHeight) {
+  var pixel_to_x_mapper = makeLinearMapper([0, canvasWidth], [xMin, xMax], false);
+  var pixel_to_y_mapper = makeLinearMapper([canvasHeight, 0], [yMin, yMax], false);
+
+  var minValue = 9999999;
+  var maxValue = -9999999;
+  var pixelValues = new Array(canvasWidth * canvasHeight);
+
+  // Calculate values for each pixel, and find the min and max values
+  for (var pixelX = 0; pixelX < canvasWidth; pixelX++) {
+    for (var pixelY = 0; pixelY < canvasHeight; pixelY++) {
+      var x = pixel_to_x_mapper(pixelX);
+      var y = pixel_to_y_mapper(pixelY);
+      var result = func(x, y);
+      if (result > maxValue) {
+        maxValue = result;
+      }
+      if (result < minValue) {
+        minValue = result;
+      }
+
+      pixelValues[(pixelY * canvasWidth) + pixelX] = result;
+    }
+  }
+
+  return {'pixelValues': pixelValues, 'max': maxValue, 'min': minValue};
+};
+
 ////////////////////////////////////////////////////////////////////////////////// Utility Functions
 
 var getParameterByName = function(name, url) {
@@ -209,41 +230,7 @@ var makeColorMapper = function(minInput, maxInput) {
     return mapper;
 };
 
-var calculateFuncForWindow = function(func, xMin, xMax, yMin, yMax) {
-  var canvas = document.getElementById('canvas');
-  var context = canvas.getContext('2d');
-  var canvasWidth = context.canvas.width;
-  var canvasHeight = context.canvas.height;
-
-  var pixel_to_x_mapper = makeLinearMapper([0, canvasWidth], [xMin, xMax], false);
-  var pixel_to_y_mapper = makeLinearMapper([canvasHeight, 0], [yMin, yMax], false);
-
-  var minValue = 9999999;
-  var maxValue = -9999999;
-  var pixelValues = new Array(canvasWidth * canvasHeight);
-
-  // Calculate values for each pixel, and find the min and max values
-  for (var pixelX = 0; pixelX < canvasWidth; pixelX++) {
-    for (var pixelY = 0; pixelY < canvasHeight; pixelY++) {
-      var x = pixel_to_x_mapper(pixelX);
-      var y = pixel_to_y_mapper(pixelY);
-      var result = func(x, y);
-      if (result > maxValue) {
-        maxValue = result;
-      }
-      if (result < minValue) {
-        minValue = result;
-      }
-
-      pixelValues[(pixelY * canvasWidth) + pixelX] = result;
-    }
-  }
-
-  return {'pixelValues': pixelValues, 'max': maxValue, 'min': minValue};
-};
-
-var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue) {
-  var canvas = document.getElementById('canvas');
+var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue, canvasElem) {
   var context = canvas.getContext('2d');
   var canvasWidth = context.canvas.width;
   var canvasHeight = context.canvas.height;
@@ -258,7 +245,6 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue) {
   };
 
   // Determine the color scale based on the min and max values
-  // TODO: make color mapper go from minValue to maxValue
   var colorMapper = makeColorMapper(valueModifier(maxValue), valueModifier(minValue));
 
   // Set the color for each pixel based on the values
@@ -266,35 +252,6 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue) {
     for (var y = 0; y < canvasHeight; y++) {
       var value = pixelValues[y * canvasWidth + x];
       var color = colorMapper(valueModifier(value));
-
-      // Set pixel color channels
-      var pixelOffset = (canvasWidth * y + x) * 4;
-      pixelData[pixelOffset] = color[0];     // red
-      pixelData[pixelOffset + 1] = color[1]; // green
-      pixelData[pixelOffset + 2] = color[2]; // blue
-      pixelData[pixelOffset + 3] = 255;      // alpha
-    }
-  }
-
-  context.putImageData(imageData, 0, 0);
-};
-
-var displayBinaryGraph = function(pixelValues, truthThreshold) {
-  var canvas = document.getElementById('canvas');
-  var context = canvas.getContext('2d');
-  var canvasWidth = context.canvas.width;
-  var canvasHeight = context.canvas.height;
-  var imageData = context.createImageData(canvasWidth, canvasHeight);
-  var pixelData = imageData.data;
-
-  // Set the color for each pixel based on the values
-  for (var x = 0; x < canvasWidth; x++) {
-    for (var y = 0; y < canvasHeight; y++) {
-      var value = pixelValues[y * canvasWidth + x];
-      var color = [255, 255, 255]; // white
-      if (Math.pow(value, 2) <= truthThreshold) {
-        color = [0, 0, 0];  // black
-      }
 
       // Set pixel color channels
       var pixelOffset = (canvasWidth * y + x) * 4;
@@ -316,7 +273,6 @@ var getHeightToWidthMultiplier = function(xWidth, yWidth) {
 var canvas = document.getElementById('canvas');
 var context = canvas.getContext('2d');
 
-var graph_truthy = true;
 var fuzzy_value = 20;
 
 var xCenter = 0;
@@ -342,7 +298,6 @@ var recalculateWindows = function(xCenter, yCenter, yWidth) {
 };
 
 var equation_input = document.querySelector('#equation');
-var radios = document.querySelectorAll('input[type=radio][name="graph-type"]');
 
 var getInputAndGraph = function() {
   try {
@@ -353,13 +308,10 @@ var getInputAndGraph = function() {
   }
 
   if (equationToGraph) {
-    var pixelValues = calculateFuncForWindow(equationToGraph, xMin, xMax, yMin, yMax);
-
-    if (graph_truthy) {
-      displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'], fuzzy_value);
-    } else {
-      displayBinaryGraph(pixelValues['pixelValues'], 0.0005);
-    }
+    var pixelValues = calculateFuncForWindow(equationToGraph, xMin, xMax, yMin, yMax,
+        context.canvas.width, context.canvas.height);
+    displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'], fuzzy_value,
+        document.getElementById('canvas'));
   }
 };
 
@@ -419,7 +371,6 @@ canvas.onmouseup = function(e){
     dragStop.x = e.x;
     dragStop.y = e.y;
 
-    console.log('offset = ', dragStop.x - dragStart.x, dragStop.y - dragStart.y);
     panGraph(dragStop.x - dragStart.x, dragStop.y - dragStart.y);
 };
 
@@ -431,20 +382,11 @@ canvas.onmousemove = function(e){
     return false;
 };
 
-var graphTruthyChangeHandler = function(event) {
-  graph_truthy = (this.value === 'truthy');
-  getInputAndGraph();
-};
-
 window.onresize = function(event) {
   makeCanvasFullPage();
   recalculateWindows(xCenter, yCenter, yWidth);
   getInputAndGraph();
 };
-
-Array.prototype.forEach.call(radios, function(radio) {
-   radio.addEventListener('change', graphTruthyChangeHandler);
-});
 
 equation_input.addEventListener('input', getInputAndGraph);
 
