@@ -11,17 +11,10 @@
       margin: 0px;
     }
 
-    /*.container {
-      width: 702px;
-      border: 1px solid black;
-      float:left;
-      /*margin: 0 auto;*/
-    }*/
-
     #main {
       position:relative;
-      height: 700px;
-      width:60%;
+      height: 100%;
+      width:100%;
     }
 
     #controls {
@@ -60,33 +53,6 @@
       font-size: 0.7em;
     }
 
-    /* Footer */
-    .footer {
-      margin-top: 50px;
-      text-align: center;
-      color: #AAAAAA;
-      font-size: .8em;
-    }
-
-    .footer-container {
-      width: 200px;
-      margin-left: auto;
-      margin-right: auto;
-      font-weight: 200;
-      margin-bottom: 40px;
-    }
-
-    .footer hr {
-      border: 0;
-      border-bottom: 1px dashed #ccc;
-      background: #999;
-      margin: 2px;
-    }
-
-    .footer a, .footer a:visited, .footer a:hover {
-      color: #000064;
-    }
-
     #equation {
       border: 1px solid #ccc;
       border-radius: 4px;
@@ -107,10 +73,6 @@
       /*pointer-events: none;*/
     }
 
-    .radio-fieldset {
-      margin: 7px 0px;
-    }
-
     .zoom-btn {
       padding: 5px 10px;
     }
@@ -120,71 +82,36 @@
       border-radius: 5px;
       -webkit-border-radius: 5px; //edit :D
     }
-
-    /*#fuzzy-slider {
-      margin-bottom: 30px;
-    }*/
   </style>
 </head><body>
 
-  <div id="main">
-    <div id="controls">
-      <h1 class="title">Truthy Graphy</h1>
-      <div>
-        <input type="equation" id="equation" placeholder="y^2 = x^3 - x + 1">
+<div id="main">
+  <div id="controls">
+    <h1 class="title">Truthy Graphy</h1>
+    <div>
+      <input type="equation" id="equation" placeholder="y^2 = x^3 - x + 1">
 
-<!-- 
-  <fieldset>
-    <legend>Graphing mode</legend>
-    <label for="graph-type-truthy">Truthy</label>
-    <input type="radio" name="graph-type" id="graph-type-truthy" value="truthy" checked>
-    <label for="graph-type-boolean">Boolean</label>
-    <input type="radio" name="graph-type" id="graph-type-boolean" value="boolean">
-  </fieldset> -->
+      <fieldset>
+        <legend>Fuzzy level</legend>
+        <div id="fuzzy-slider"></div>
+      </fieldset>
 
-  <fieldset>
-    <legend>Fuzzy level</legend>
-    <div id="fuzzy-slider"></div>
-  </fieldset>
+      <fieldset>
+        <legend>Zoom</legend>
+        <button id="zoom-in-btn" class="zoom-btn">+</button>
+        <button id="zoom-out-btn" class="zoom-btn">-</button>
+      </fieldset>
 
-  <!-- <label>
-    <span class="checkable">Fuzzy Level</span>
-    <div id="fuzzy-slider"></div>
-  </label> -->
-
-  <fieldset>
-    <legend>Zoom</legend>
-    <button id="zoom-in-btn" class="zoom-btn">+</button>
-    <button id="zoom-out-btn" class="zoom-btn">-</button>
-</fieldset>
-
-  <hr />
-  <div id="footer-info">
-    <span>Project by <a href="http://calebmadrigal.com">Caleb Madrigal</a> - <a href="https://github.com/calebmadrigal/truthy-graphy">View on Github</a></span>
+      <hr />
+      <div id="footer-info">
+        <span>Project by <a href="http://calebmadrigal.com">Caleb Madrigal</a> - <a href="https://github.com/calebmadrigal/truthy-graphy">View on Github</a></span>
+      </div>
+    </div>
   </div>
-</div>
-
-<!-- <div>
-<article class="card">
-<header>
-<h5>Examples</h5>
-</header>
-<footer>
-<a href="#">y=x^2</a>
-<span>y=x^3-2x</span>
-<span>y=sin(3x)</span>
-<span>x = y^2 - 2</span>
-<span>x^2/2+y^2=3</span>
-</footer>
-</article>
-</div> -->
-
-</div>
-
-<canvas id="canvas"> <!--  width="700" height="700"> -->
-  Your browser does not support HTML5 Canvas.
-</canvas>
-
+  
+  <canvas id="canvas">
+    Your browser does not support HTML5 Canvas.
+  </canvas>
 </div>
 
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.5.1/nouislider.min.js"></script>
@@ -194,7 +121,7 @@ var makeCanvasFullPage = function () {
   var context = canvas.getContext('2d');
   context.canvas.width  = window.innerWidth;
   context.canvas.height = window.innerHeight;
-}
+};
 
 makeCanvasFullPage();
 
@@ -235,7 +162,37 @@ var parseEquationString = function(eq_str) {
   var error_func = function (x, y) { return Math.abs(left_eq(x, y) - right_eq(x, y)); }
 
   return error_func;
-}
+};
+
+var getXMin = function (xWidth, xCenter) {
+  return -1 * xWidth / 2 + xCenter;
+};
+
+var getXMax = function (xWidth, xCenter) {
+  return xWidth / 2 + xCenter;
+};
+
+var getYMin = function (yWidth, yCenter) {
+  return -1 * yWidth / 2 + yCenter;
+};
+
+var getYMax = function (yWidth, yCenter) {
+  return yWidth / 2 + yCenter;
+};
+
+////////////////////////////////////////////////////////////////////////////////// Utility Functions
+
+var getParameterByName = function(name, url) {
+  // Copied from:
+  // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+  if (!url) url = window.location.href;
+  name = name.replace(/[\[\]]/g, "\\$&");
+  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+      results = regex.exec(url);
+  if (!results) return null;
+  if (!results[2]) return '';
+  return decodeURIComponent(results[2].replace(/\+/g, " "));
+};
 
 ////////////////////////////////////////////////////////////////////////////////////// Display stuff
 
@@ -283,7 +240,7 @@ var calculateFuncForWindow = function(func, xMin, xMax, yMin, yMax) {
   }
 
   return {'pixelValues': pixelValues, 'max': maxValue, 'min': minValue};
-}
+};
 
 var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue) {
   var canvas = document.getElementById('canvas');
@@ -298,7 +255,7 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue) {
   // to look like a more intense value on the graph
   var valueModifier = function (value) {
     return Math.pow(maxValue - value, fuzzyValue);
-  }
+  };
 
   // Determine the color scale based on the min and max values
   // TODO: make color mapper go from minValue to maxValue
@@ -308,7 +265,7 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue) {
   for (var x = 0; x < canvasWidth; x++) {
     for (var y = 0; y < canvasHeight; y++) {
       var value = pixelValues[y * canvasWidth + x];
-      color = colorMapper(valueModifier(value));
+      var color = colorMapper(valueModifier(value));
 
       // Set pixel color channels
       var pixelOffset = (canvasWidth * y + x) * 4;
@@ -334,11 +291,9 @@ var displayBinaryGraph = function(pixelValues, truthThreshold) {
   for (var x = 0; x < canvasWidth; x++) {
     for (var y = 0; y < canvasHeight; y++) {
       var value = pixelValues[y * canvasWidth + x];
+      var color = [255, 255, 255]; // white
       if (Math.pow(value, 2) <= truthThreshold) {
         color = [0, 0, 0];  // black
-      }
-      else {
-        color = [255, 255, 255];  // white
       }
 
       // Set pixel color channels
@@ -355,21 +310,7 @@ var displayBinaryGraph = function(pixelValues, truthThreshold) {
 
 var getHeightToWidthMultiplier = function(xWidth, yWidth) {
   return xWidth / yWidth;
-}
-
-////////////////////////////////////////////////////////////////////////////////// Utility Functions
-
-function getParameterByName(name, url) {
-  // Copied from:
-  // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
-  if (!url) url = window.location.href;
-  name = name.replace(/[\[\]]/g, "\\$&");
-  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-      results = regex.exec(url);
-  if (!results) return null;
-  if (!results[2]) return '';
-  return decodeURIComponent(results[2].replace(/\+/g, " "));
-}
+};
 
 /////////////////////////////////////////////////////////////////////////////////////////////// Main
 var canvas = document.getElementById('canvas');
@@ -383,22 +324,6 @@ var yCenter = 0;
 
 var yWidth = 6;
 var xWidth = yWidth * getHeightToWidthMultiplier(context.canvas.width, context.canvas.height);
-
-var getXMin = function (xWidth, xCenter) {
-  return -1 * xWidth / 2 + xCenter;
-}
-
-var getXMax = function (xWidth, xCenter) {
-  return xWidth / 2 + xCenter;
-}
-
-var getYMin = function (yWidth, yCenter) {
-  return -1 * yWidth / 2 + yCenter;
-}
-
-var getYMax = function (yWidth, yCenter) {
-  return yWidth / 2 + yCenter;
-}
 
 var xMin = getXMin(xWidth, xCenter);
 var xMax = getXMax(xWidth, xCenter);
@@ -414,7 +339,7 @@ var recalculateWindows = function(xCenter, yCenter, yWidth) {
   xMax = getXMax(xWidth, xCenter);
   yMin = getYMin(yWidth, yCenter);
   yMax = getYMax(yWidth, yCenter);
-}
+};
 
 var equation_input = document.querySelector('#equation');
 var radios = document.querySelectorAll('input[type=radio][name="graph-type"]');
@@ -436,13 +361,13 @@ var getInputAndGraph = function() {
       displayBinaryGraph(pixelValues['pixelValues'], 0.0005);
     }
   }
-}
+};
 
 var updateFuzzy = function(nr, val) {
   console.log(nr, val.value);
   fuzzy_value = 201 - parseInt(val.value);
 	getInputAndGraph();
-}
+};
 
 $('#fuzzy-slider').slider({
   range: "min",
@@ -476,7 +401,7 @@ var panGraph = function(xOffsetPixels, yOffsetPixels) {
   yCenter = yCenter + yOffset;  // Due to flipped y, negate yOffset (and -1*-1 = 1)
   recalculateWindows(xCenter, yCenter, yWidth);
   getInputAndGraph();
-}
+};
 
 var mouseIsDown = false;
 var dragStart = {};
@@ -486,7 +411,8 @@ canvas.onmousedown = function(e){
     dragStart.x = e.x;
     dragStart.y = e.y;
     mouseIsDown = true;
-}
+};
+
 canvas.onmouseup = function(e){
     mouseIsDown = false;
 
@@ -495,7 +421,7 @@ canvas.onmouseup = function(e){
 
     console.log('offset = ', dragStop.x - dragStart.x, dragStop.y - dragStart.y);
     panGraph(dragStop.x - dragStart.x, dragStop.y - dragStart.y);
-}
+};
 
 canvas.onmousemove = function(e){
     if(!mouseIsDown) return;
@@ -503,16 +429,12 @@ canvas.onmousemove = function(e){
     dragStop.x = e.x;
     dragStop.y = e.y;
     return false;
-}
+};
 
-function graphTruthyChangeHandler(event) {
-   if ( this.value === 'truthy' ) {
-     graph_truthy = true;
-   } else {
-     graph_truthy = false;
-   }
-   getInputAndGraph();
-}
+var graphTruthyChangeHandler = function(event) {
+  graph_truthy = (this.value === 'truthy');
+  getInputAndGraph();
+};
 
 window.onresize = function(event) {
   makeCanvasFullPage();
@@ -542,7 +464,6 @@ getInputAndGraph();
 $("#controls").draggable({ snap: "#main" });
 $("button").button();
 $('input').addClass("ui-corner-all");
-//$("input[type=radio]").checkboxradio();
 
 </script>
 
