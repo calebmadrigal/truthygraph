@@ -1,26 +1,53 @@
 <html><head>
   <title>Truthy Graphy</title>
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/3.3.0/math.min.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picnic/6.1.2/picnic.min.css">
+  <!-- <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/picnic/6.1.2/picnic.min.css"> -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.5.1/nouislider.min.css">
   <style>
-    .container {
+    html, body {
+      width:  100%;
+      height: 100%;
+      margin: 0px;
+    }
+
+    /*.container {
       width: 702px;
-      margin: 0 auto;
+      border: 1px solid black;
+      float:left;
+      /*margin: 0 auto;*/
+    }*/
+
+    #main {
+      position:relative;
+      height: 700px;
+      width:60%;
+    }
+
+    #controls {
+      width: 250px;
+      height: 300px;
+      z-index: 10;  /* <- higher than your canvases if it needs to go on top */
+      position: absolute;
+      /*border: 1px solid black;*/
+      left: 0;
+      top: 0;
+      background-color: #fff;
+      background-color: rgba(255,255,255,0.5);
+      padding: 10px;
     }
 
     body {
-      padding-top: 10px;
+      /*padding-top: 10px;*/
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       color: #333;
     }
 
     .title {
       font-family: "Raleway", "Helvetica Neue", Helvetica, Arial, sans-serif;
-      font-size: 300%;
+      font-size: 200%;
       letter-spacing: 4px;
       font-weight: 100;
-      color: #000064;
+      color: white;
     }
 
     /* Footer */
@@ -53,6 +80,12 @@
     #canvas {
       border: 1px solid #ccc;
       cursor: move;
+      float: left;
+
+      width: 100%;
+      height:100%;
+      position:absolute;
+      /*pointer-events: none;*/
     }
 
     .radio-fieldset {
@@ -65,69 +98,74 @@
   </style>
 </head><body>
 
-<div class="container">
-  <article class="card">
-    <header>
-      <h1 class="title">Truthy Graphy</h1>
-    </header>
-    <footer>
-      <div class="flex two">
-        <div>
-          <label>
-            <span>Equation</span>
-            <input type="equation" id="equation" placeholder="y^2 = x^3 - x + 1">
-          </label>
-
-          <fieldset class="radio-fieldset">
+<div id="main">
+  <div id="controls">
+    <article class="card">
+      <header>
+        <h1 class="title">Truthy Graphy</h1>
+      </header>
+      <footer>
+        <div class="flex two">
+          <div>
             <label>
-              <input type="radio" name="graph-type" value="truthy" checked>
-              <span class="checkable">Graph Truthy</span>
+              <span>Equation</span>
+              <input type="equation" id="equation" placeholder="y^2 = x^3 - x + 1">
             </label>
 
+            <fieldset class="radio-fieldset">
+              <label>
+                <input type="radio" name="graph-type" value="truthy" checked>
+                <span class="checkable">Graph Truthy</span>
+              </label>
+
+              <label>
+                <input type="radio" name="graph-type" value="boolean">
+                <span class="checkable">Graph Boolean</span>
+              </label>
+            </fieldset>
+
             <label>
-              <input type="radio" name="graph-type" value="boolean">
-              <span class="checkable">Graph Boolean</span>
+              <span class="checkable">Fuzzy Level</span>
+              <div id="fuzzy-slider"></div>
             </label>
-          </fieldset>
 
-          <label>
-            <span class="checkable">Fuzzy Level</span>
-            <div id="fuzzy-slider"></div>
-          </label>
+            <button id="zoom-in-btn">+</button>
+            <button id="zoom-out-btn">-</button>
 
-          <button id="zoom-in-btn">+</button>
-          <button id="zoom-out-btn">-</button>
+            <hr />
+            <span>Project by <a href="http://calebmadrigal.com">Caleb Madrigal</a></span><br>
+            <a href="https://github.com/calebmadrigal/truthy-graphy">View on Github</a>
+          </div>
+
+          <!-- <div>
+            <article class="card">
+              <header>
+                <h5>Examples</h5>
+              </header>
+              <footer>
+                <a href="#">y=x^2</a>
+                <span>y=x^3-2x</span>
+                <span>y=sin(3x)</span>
+                <span>x = y^2 - 2</span>
+                <span>x^2/2+y^2=3</span>
+              </footer>
+            </article>
+          </div> -->
         </div>
 
-        <!-- <div>
-          <article class="card">
-            <header>
-              <h5>Examples</h5>
-            </header>
-            <footer>
-              <a href="#">y=x^2</a>
-              <span>y=x^3-2x</span>
-              <span>y=sin(3x)</span>
-              <span>x = y^2 - 2</span>
-              <span>x^2/2+y^2=3</span>
-            </footer>
-          </article>
-        </div> -->
-      </div>
 
+      </footer>
+    </article>
+  </div>
 
-    </footer>
-  </article>
-
-  <canvas id="canvas" width="700" height="700">
+  <canvas id="canvas"> <!--  width="700" height="700"> -->
     Your browser does not support HTML5 Canvas.
   </canvas>
 
 </div>
 
 
-
-<div class="footer">
+<!-- <div class="footer">
   <div class="footer-container">
       <span>
         <a href="https://github.com/calebmadrigal/truthy-graphy">View on Github</a>
@@ -135,10 +173,18 @@
     <hr />
     <span>Project by <a href="http://calebmadrigal.com">Caleb Madrigal</a></span>
   </div>
-</div>
+</div> -->
 
 <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.5.1/nouislider.min.js"></script>
 <script type="text/javascript">
+var makeCanvasFullPage = function () {
+  var canvas = document.getElementById('canvas');
+  var context = canvas.getContext('2d');
+  context.canvas.width  = window.innerWidth;
+  context.canvas.height = window.innerHeight;
+}
+
+makeCanvasFullPage();
 
 ////////////////////////////////////////////////////////////////////////////////////  Math functions
 
@@ -458,6 +504,12 @@ function graphTruthyChangeHandler(event) {
    }
    getInputAndGraph();
 }
+
+window.onresize = function(event) {
+  makeCanvasFullPage();
+  recalculateWindows(xCenter, yCenter, yWidth);
+  getInputAndGraph();
+};
 
 Array.prototype.forEach.call(radios, function(radio) {
    radio.addEventListener('change', graphTruthyChangeHandler);
