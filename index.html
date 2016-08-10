@@ -8,7 +8,7 @@
     html, body {
       width:  100%;
       height: 100%;
-      margin: 0px;
+      margin: 0;
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       color: #333;
     }
@@ -21,9 +21,8 @@
 
     #controls {
       width: 250px;
-      z-index: 10;  /* <- higher than your canvases if it needs to go on top */
+      z-index: 10;
       position: absolute;
-      /*border: 1px solid black;*/
       left: 0;
       top: 0;
       background-color: #fff;
@@ -40,7 +39,7 @@
       letter-spacing: 4px;
       font-weight: 100;
       color: white;
-      margin: 5px 0px;
+      margin: 5px 0;
       text-align: center;
     }
 
@@ -73,7 +72,7 @@
     fieldset {
       -moz-border-radius:5px;
       border-radius: 5px;
-      -webkit-border-radius: 5px; //edit :D
+      -webkit-border-radius: 5px;
     }
   </style>
 </head><body>
@@ -107,16 +106,9 @@
   </canvas>
 </div>
 
-<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/8.5.1/nouislider.min.js"></script>
 <script type="text/javascript">
-var makeCanvasFullPage = function () {
-  var canvas = document.getElementById('canvas');
-  var context = canvas.getContext('2d');
-  context.canvas.width  = window.innerWidth;
-  context.canvas.height = window.innerHeight;
-};
-
-makeCanvasFullPage();
+ZOOM_RATE = 1.2;
+MAX_FUZZY = 200;
 
 ////////////////////////////////////////////////////////////////////////////////////  Math functions
 
@@ -152,7 +144,7 @@ var parseEquationString = function(eq_str) {
 
   var left_eq = math.eval('f(x, y) = ' + split_result[0], {});
   var right_eq = math.eval('f(x, y) = ' + split_result[1], {});
-  var error_func = function (x, y) { return Math.abs(left_eq(x, y) - right_eq(x, y)); }
+  var error_func = function (x, y) { return Math.abs(left_eq(x, y) - right_eq(x, y)); };
 
   return error_func;
 };
@@ -173,9 +165,30 @@ var getYMax = function (yWidth, yCenter) {
   return yWidth / 2 + yCenter;
 };
 
-var calculateFuncForWindow = function(func, xMin, xMax, yMin, yMax, canvasWidth, canvasHeight) {
-  var pixel_to_x_mapper = makeLinearMapper([0, canvasWidth], [xMin, xMax], false);
-  var pixel_to_y_mapper = makeLinearMapper([canvasHeight, 0], [yMin, yMax], false);
+var getHeightToWidthMultiplier = function(xWidth, yWidth) {
+  return xWidth / yWidth;
+};
+
+var getXWidth = function(yWidth, canvasWidth, canvasHeight) {
+  return yWidth * getHeightToWidthMultiplier(canvasWidth, canvasHeight);
+};
+
+var calcWindowBounds = function(xCenter, yCenter, yWidth, canvasWidth, canvasHeight) {
+  // Calculate xWidth based on yWidth
+  var xWidth = getXWidth(yWidth, canvasWidth, canvasHeight);
+
+  // Calculate x and y min and max based on window size and center
+  return {
+    'xMin': getXMin(xWidth, xCenter),
+    'xMax': getXMax(xWidth, xCenter),
+    'yMin': getYMin(yWidth, yCenter),
+    'yMax': getYMax(yWidth, yCenter)
+  };
+};
+
+var calculateFuncForWindow = function(func, window, canvasWidth, canvasHeight) {
+  var pixel_to_x_mapper = makeLinearMapper([0, canvasWidth], [window['xMin'], window['xMax']], false);
+  var pixel_to_y_mapper = makeLinearMapper([canvasHeight, 0], [window['yMin'], window['yMax']], false);
 
   var minValue = 9999999;
   var maxValue = -9999999;
@@ -201,20 +214,6 @@ var calculateFuncForWindow = function(func, xMin, xMax, yMin, yMax, canvasWidth,
   return {'pixelValues': pixelValues, 'max': maxValue, 'min': minValue};
 };
 
-////////////////////////////////////////////////////////////////////////////////// Utility Functions
-
-var getParameterByName = function(name, url) {
-  // Copied from:
-  // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
-  if (!url) url = window.location.href;
-  name = name.replace(/[\[\]]/g, "\\$&");
-  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-      results = regex.exec(url);
-  if (!results) return null;
-  if (!results[2]) return '';
-  return decodeURIComponent(results[2].replace(/\+/g, " "));
-};
-
 ////////////////////////////////////////////////////////////////////////////////////// Display stuff
 
 var makeColorMapper = function(minInput, maxInput) {
@@ -223,15 +222,14 @@ var makeColorMapper = function(minInput, maxInput) {
 
     var mapper = function(val) {
         var colorVal = colorMapper(val);
-        var rgbVals = [colorVal, colorVal, 100];
-        return rgbVals;
+        return [colorVal, colorVal, 100];
     };
 
     return mapper;
 };
 
 var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue, canvasElem) {
-  var context = canvas.getContext('2d');
+  var context = canvasElem.getContext('2d');
   var canvasWidth = context.canvas.width;
   var canvasHeight = context.canvas.height;
   var imageData = context.createImageData(canvasWidth, canvasHeight);
@@ -265,125 +263,115 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue, c
   context.putImageData(imageData, 0, 0);
 };
 
-var getHeightToWidthMultiplier = function(xWidth, yWidth) {
-  return xWidth / yWidth;
+var displayGraph = function(graphParams, canvasElem) {
+  var window = calcWindowBounds(graphParams['xCenter'],
+      graphParams['yCenter'],
+      graphParams['yWidth'],
+      graphParams['canvasWidth'],
+      graphParams['canvasHeight']);
+
+  var pixelValues = calculateFuncForWindow(graphParams['equation'],
+      window,
+      graphParams['canvasWidth'],
+      graphParams['canvasHeight']);
+
+  displayTruthyGraph(pixelValues['pixelValues'],
+      pixelValues['min'],
+      pixelValues['max'],
+      graphParams['fuzzyValue'],
+      canvasElem);
 };
 
-/////////////////////////////////////////////////////////////////////////////////////////////// Main
-
-var canvas = document.getElementById('canvas');
-var context = canvas.getContext('2d');
-var equation_input = document.querySelector('#equation');
-
-// Default values
-var fuzzy_value = 20;
-var xCenter = 0;
-var yCenter = 0;
-var yWidth = 6;
-
-var xWidth = yWidth * getHeightToWidthMultiplier(context.canvas.width, context.canvas.height);
-var xMin = getXMin(xWidth, xCenter);
-var xMax = getXMax(xWidth, xCenter);
-var yMin = getYMin(yWidth, yCenter);
-var yMax = getYMax(yWidth, yCenter);
-
-var recalculateWindows = function(xCenter, yCenter, yWidth) {
-  // Recalculate xWidth based on yWidth
-  xWidth = yWidth * getHeightToWidthMultiplier(context.canvas.width, context.canvas.height);
-
-  // Recalculate x and y min and max based on window size and center
-  xMin = getXMin(xWidth, xCenter);
-  xMax = getXMax(xWidth, xCenter);
-  yMin = getYMin(yWidth, yCenter);
-  yMax = getYMax(yWidth, yCenter);
+var zoomIn = function(graphParams, canvasElem) {
+  graphParams['yWidth'] = graphParams['yWidth'] * (1/ZOOM_RATE);
+  displayGraph(graphParams, canvasElem);
 };
 
-var getInputAndGraph = function() {
-  try {
-    var equationToGraph = parseEquationString(equation_input.value);
-  }
-  catch(err) {
-    return;
-  }
-
-  if (equationToGraph) {
-    var pixelValues = calculateFuncForWindow(equationToGraph, xMin, xMax, yMin, yMax,
-        context.canvas.width, context.canvas.height);
-    displayTruthyGraph(pixelValues['pixelValues'], pixelValues['min'], pixelValues['max'], fuzzy_value,
-        document.getElementById('canvas'));
-  }
+var zoomOut = function(graphParams, canvasElem) {
+  graphParams['yWidth'] = graphParams['yWidth'] * ZOOM_RATE;
+  displayGraph(graphParamsGlobal, canvasElem);
 };
 
-// Try to get equation from url
-var urlFragmentId = window.location.hash.substr(1);
-var eqFromUrl = getParameterByName('eq', urlFragmentId);
+var panGraph = function(graphParams, xOffsetPixels, yOffsetPixels, canvasElem) {
+  var xWidth = getXWidth(graphParams['yWidth'], graphParams['canvasWidth'], graphParams['canvasHeight']);
 
-// Initial conditions
-if (eqFromUrl) {
-  equation_input.value = eqFromUrl;
-} else {
-  equation_input.value = "y^2=x^3 - x + 1";
-}
+  // First, we have to convert the offset in pixels into the offset in our graphing window
+  var xOffset = xOffsetPixels * (xWidth / graphParams['canvasWidth']);
+  var yOffset = yOffsetPixels * (graphParams['yWidth'] / graphParams['canvasHeight']);
 
+  // Then we need to move the center of our graphing window accordingly
+  graphParams['xCenter'] = graphParams['xCenter'] - xOffset;
+  graphParams['yCenter'] = graphParams['yCenter'] + yOffset;  // Due to flipped y, negate yOffset (and -1*-1 = 1)
 
-getInputAndGraph();
+  displayGraph(graphParams, canvasElem);
+};
 
+////////////////////////////////////////////////////////////////////////////////////// Initial stuff
+
+// jQuery UI crap
 $("#controls").draggable({ snap: "#main" });
 $("button").button();
 $('input').addClass("ui-corner-all");
 
+var canvas = document.getElementById('canvas');
+var context = canvas.getContext('2d');
+
+// Setup default parameters
+var graphParamsGlobal = {
+  'equation': parseEquationString('y^2=x^3 - x + 1'),
+  'fuzzyValue': 70,
+  'xCenter': 0,
+  'yCenter': 0,
+  'yWidth': 6,
+  'canvasWidth': context.canvas.width,
+  'canvasHeight': context.canvas.height
+};
 
 ///////////////////////////////////////////////////////////////////////////////////// Event handlers
 
-
 //////////// Equation change handler
 
-equation_input.addEventListener('input', getInputAndGraph);
+var equationChangeHandler = function() {
+  try {
+    var equationToGraph = parseEquationString(equation_input.value);
+    if (equationToGraph) {
+      graphParamsGlobal['equation'] = equationToGraph;
+      displayGraph(graphParamsGlobal, document.getElementById('canvas'));
+    }
+  }
+  catch(err) {
+    return;
+  }
+};
+
+document.getElementById('equation').addEventListener('input', equationChangeHandler);
 
 //////////// Fuzzy value handlers
 
 var updateFuzzy = function(nr, val) {
-  fuzzy_value = 201 - parseInt(val.value);
-	getInputAndGraph();
+  graphParamsGlobal['fuzzyValue'] = (MAX_FUZZY+1) - parseInt(val.value);
+	displayGraph(graphParamsGlobal, document.getElementById('canvas'));
 };
 
 $('#fuzzy-slider').slider({
   range: "min",
   min: 1,
-  max: 200,
-  value: 200 - 20,
+  max: MAX_FUZZY,
+  value: 200 - 50,
   slide: updateFuzzy,
   change: updateFuzzy
 });
 
 //////////// Zoom handlers
 
-var zoomIn = function() {
-  yWidth = yWidth * 0.833;
-  recalculateWindows(xCenter, yCenter, yWidth);
-  getInputAndGraph();
+document.getElementById('zoom-in-btn').onclick = function () {
+  zoomIn(graphParamsGlobal, document.getElementById('canvas'));
 };
-
-var zoomOut = function() {
-  yWidth = yWidth * 1.2;
-  recalculateWindows(xCenter, yCenter, yWidth);
-  getInputAndGraph();
+document.getElementById('zoom-out-btn').onclick = function () {
+  zoomOut(graphParamsGlobal, document.getElementById('canvas'));
 };
-
-document.getElementById('zoom-in-btn').onclick = zoomIn;
-document.getElementById('zoom-out-btn').onclick = zoomOut;
 
 //////////// Pan handlers
-
-var panGraph = function(xOffsetPixels, yOffsetPixels) {
-  // First, we have to convert the offset in pixels into the offset in our graphing window
-  var xOffset = xOffsetPixels * (xWidth / context.canvas.width);
-  var yOffset = yOffsetPixels * (yWidth / context.canvas.height);
-  xCenter = xCenter - xOffset;
-  yCenter = yCenter + yOffset;  // Due to flipped y, negate yOffset (and -1*-1 = 1)
-  recalculateWindows(xCenter, yCenter, yWidth);
-  getInputAndGraph();
-};
 
 var mouseIsDown = false;
 var dragStart = {};
@@ -397,16 +385,13 @@ canvas.onmousedown = function(e){
 
 canvas.onmouseup = function(e){
     mouseIsDown = false;
-
     dragStop.x = e.x;
     dragStop.y = e.y;
-
-    panGraph(dragStop.x - dragStart.x, dragStop.y - dragStart.y);
+    panGraph(graphParamsGlobal, dragStop.x - dragStart.x, dragStop.y - dragStart.y, document.getElementById('canvas'));
 };
 
 canvas.onmousemove = function(e){
     if(!mouseIsDown) return;
-
     dragStop.x = e.x;
     dragStop.y = e.y;
     return false;
@@ -414,11 +399,49 @@ canvas.onmousemove = function(e){
 
 //////////// Window resize handling
 
+var makeCanvasFullPage = function () {
+  context.canvas.width  = window.innerWidth;
+  context.canvas.height = window.innerHeight;
+  graphParamsGlobal['canvasWidth'] = context.canvas.width;
+  graphParamsGlobal['canvasHeight'] = context.canvas.height;
+};
+
 window.onresize = function(event) {
   makeCanvasFullPage();
-  recalculateWindows(xCenter, yCenter, yWidth);
-  getInputAndGraph();
+  displayGraph(graphParamsGlobal, document.getElementById('canvas'));
 };
+
+/////////////////////////////////////////////////////////////////////////////////////// URL Handling
+
+var getParameterByName = function(name, url) {
+  // Copied from:
+  // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+  if (!url) url = window.location.href;
+  name = name.replace(/[\[\]]/g, "\\$&");
+  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+      results = regex.exec(url);
+  if (!results) return null;
+  if (!results[2]) return '';
+  return decodeURIComponent(results[2].replace(/\+/g, " "));
+};
+
+var equation_input = document.querySelector('#equation');
+
+// Try to get equation from url
+var urlFragmentId = window.location.hash.substr(1);
+var eqFromUrl = getParameterByName('eq', urlFragmentId);
+
+// Initial conditions
+if (eqFromUrl) {
+  equation_input.value = eqFromUrl;
+} else {
+  equation_input.value = "y^2=x^3 - x + 1";
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////// Main
+
+makeCanvasFullPage();
+displayGraph(graphParamsGlobal, document.getElementById('canvas'));
 
 </script>
 
