@@ -270,17 +270,18 @@ var getHeightToWidthMultiplier = function(xWidth, yWidth) {
 };
 
 /////////////////////////////////////////////////////////////////////////////////////////////// Main
+
 var canvas = document.getElementById('canvas');
 var context = canvas.getContext('2d');
+var equation_input = document.querySelector('#equation');
 
+// Default values
 var fuzzy_value = 20;
-
 var xCenter = 0;
 var yCenter = 0;
-
 var yWidth = 6;
-var xWidth = yWidth * getHeightToWidthMultiplier(context.canvas.width, context.canvas.height);
 
+var xWidth = yWidth * getHeightToWidthMultiplier(context.canvas.width, context.canvas.height);
 var xMin = getXMin(xWidth, xCenter);
 var xMax = getXMax(xWidth, xCenter);
 var yMin = getYMin(yWidth, yCenter);
@@ -296,8 +297,6 @@ var recalculateWindows = function(xCenter, yCenter, yWidth) {
   yMin = getYMin(yWidth, yCenter);
   yMax = getYMax(yWidth, yCenter);
 };
-
-var equation_input = document.querySelector('#equation');
 
 var getInputAndGraph = function() {
   try {
@@ -315,8 +314,35 @@ var getInputAndGraph = function() {
   }
 };
 
+// Try to get equation from url
+var urlFragmentId = window.location.hash.substr(1);
+var eqFromUrl = getParameterByName('eq', urlFragmentId);
+
+// Initial conditions
+if (eqFromUrl) {
+  equation_input.value = eqFromUrl;
+} else {
+  equation_input.value = "y^2=x^3 - x + 1";
+}
+
+
+getInputAndGraph();
+
+$("#controls").draggable({ snap: "#main" });
+$("button").button();
+$('input').addClass("ui-corner-all");
+
+
+///////////////////////////////////////////////////////////////////////////////////// Event handlers
+
+
+//////////// Equation change handler
+
+equation_input.addEventListener('input', getInputAndGraph);
+
+//////////// Fuzzy value handlers
+
 var updateFuzzy = function(nr, val) {
-  console.log(nr, val.value);
   fuzzy_value = 201 - parseInt(val.value);
 	getInputAndGraph();
 };
@@ -329,6 +355,8 @@ $('#fuzzy-slider').slider({
   slide: updateFuzzy,
   change: updateFuzzy
 });
+
+//////////// Zoom handlers
 
 var zoomIn = function() {
   yWidth = yWidth * 0.833;
@@ -344,6 +372,8 @@ var zoomOut = function() {
 
 document.getElementById('zoom-in-btn').onclick = zoomIn;
 document.getElementById('zoom-out-btn').onclick = zoomOut;
+
+//////////// Pan handlers
 
 var panGraph = function(xOffsetPixels, yOffsetPixels) {
   // First, we have to convert the offset in pixels into the offset in our graphing window
@@ -382,30 +412,13 @@ canvas.onmousemove = function(e){
     return false;
 };
 
+//////////// Window resize handling
+
 window.onresize = function(event) {
   makeCanvasFullPage();
   recalculateWindows(xCenter, yCenter, yWidth);
   getInputAndGraph();
 };
-
-equation_input.addEventListener('input', getInputAndGraph);
-
-// Try to get equation from url
-var urlFragmentId = window.location.hash.substr(1);
-var eqFromUrl = getParameterByName('eq', urlFragmentId);
-
-// Initial conditions
-if (eqFromUrl) {
-  equation_input.value = eqFromUrl;
-} else {
-  equation_input.value = "y^2=x^3 - x + 1";
-}
-
-getInputAndGraph();
-
-$("#controls").draggable({ snap: "#main" });
-$("button").button();
-$('input').addClass("ui-corner-all");
 
 </script>
 
