@@ -1,6 +1,6 @@
 # truthy-graphy
 
-Usually, when equations are graphed, it's black and white, where black means the sides of the equation are equal, and white means the sides of the equations are not equal. *The idea behind [TruthyGraph](https://truthygraph.github.io/) is to graph equations and see not only where they are equal, but where they are close to equal.* In other words, TruthyGraph graphs the truthiness of an equation at various points in the Cartesian plane.
+Usually, when equations are graphed, it's black and white, where black means the sides of the equation are equal, and white means the sides of the equations are not equal. **The idea behind [TruthyGraph](https://truthygraph.github.io/) is to graph equations and see not only where they are equal, but where they are close to equal.** In other words, TruthyGraph graphs the truthiness of an equation at various points in the Cartesian plane.
 
 View live webapp here: <https://truthygraph.github.io/>
 
