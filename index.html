@@ -244,7 +244,7 @@ var displayTruthyGraph = function(pixelValues, minValue, maxValue, fuzzyValue, c
   // We do this because the value is a measure of error, but we want more error
   // to look like a more intense value on the graph
   var valueModifier = function (value) {
-    return Math.pow(maxValue - value, fuzzyValue);
+    return Math.pow(maxValue - value, 200 - fuzzyValue);
   };
 
   // Determine the color scale based on the min and max values
@@ -275,7 +275,7 @@ var displayGraph = function(graphParams, canvasElem) {
       graphParams['canvasWidth'],
       graphParams['canvasHeight']);
 
-  var pixelValues = calculateFuncForWindow(graphParams['equation'],
+  var pixelValues = calculateFuncForWindow(graphParams['equationCompiled'],
       window,
       graphParams['canvasWidth'],
       graphParams['canvasHeight']);
@@ -311,6 +311,58 @@ var panGraph = function(graphParams, xOffsetPixels, yOffsetPixels, canvasElem) {
   displayGraph(graphParams, canvasElem);
 };
 
+/////////////////////////////////////////////////////////////////////////////////////// URL Handling
+
+var getParameterByName = function(name, url) {
+  // Copied from:
+  // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+  if (!url) url = window.location.href;
+  name = name.replace(/[\[\]]/g, "\\$&");
+  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+      results = regex.exec(url);
+  if (!results) return null;
+  if (!results[2]) return '';
+  return decodeURIComponent(results[2].replace(/\+/g, " "));
+};
+
+var setParamsFromUrl = function (graphParams) {
+  // Try to get equation from url
+  var urlFragmentId = window.location.hash.substr(1);
+
+  var getParamFromUrl = function (param) {
+    var paramValFromUrl = getParameterByName(param, urlFragmentId);
+    if (paramValFromUrl) {
+      // if 'equation' param, compile it
+      if (param == 'equation') {
+        graphParams[param] = paramValFromUrl;
+        var equationCompiled = parseEquationString(paramValFromUrl);
+        if (equationCompiled) {
+          graphParams['equationCompiled'] = equationCompiled;
+        }
+      }
+      // Otherwise, it's a numeric value, so parse it as a float
+      else {
+        graphParams[param] = parseFloat(paramValFromUrl);
+      }
+      console.log("Got url param:" + param + " -> " + paramValFromUrl);
+    }
+  };
+
+  for (var param in graphParams) {
+    if (graphParams.hasOwnProperty(param)) {
+      getParamFromUrl(param);
+    }
+  }
+};
+
+var setUrlFromParams = function(graphParams) {
+  var hashStr = "#?equation=" + encodeURIComponent(graphParams['equation']);
+  ['fuzzyValue', 'xCenter', 'yCenter', 'yWidth'].forEach(function (param) {
+    hashStr = hashStr + "&" + param + "=" + encodeURIComponent(graphParams[param]);
+  });
+  window.location.hash = hashStr;
+};
+
 ////////////////////////////////////////////////////////////////////////////////////// Initial stuff
 
 // jQuery UI crap
@@ -323,7 +375,8 @@ var context = canvas.getContext('2d');
 
 // Setup default parameters
 var graphParamsGlobal = {
-  'equation': parseEquationString('y^2=x^3 - x + 1'),
+  'equation': 'y^2 = x^3 - x + 1',
+  'equationCompiled': parseEquationString('y^2 = x^3 - x + 1'),
   'fuzzyValue': 70,
   'xCenter': 0,
   'yCenter': 0,
@@ -332,37 +385,48 @@ var graphParamsGlobal = {
   'canvasHeight': context.canvas.height
 };
 
+// Try to get graph params from url
+setParamsFromUrl(graphParamsGlobal);
+
+console.log('graphParamsGlobal: ', graphParamsGlobal);
+
 ///////////////////////////////////////////////////////////////////////////////////// Event handlers
 
 //////////// Equation change handler
 
+var equationInput = document.getElementById('equation');
+equationInput.value = graphParamsGlobal['equation'];
+
 var equationChangeHandler = function() {
   try {
-    var equationToGraph = parseEquationString(equation_input.value);
+    var equationToGraph = parseEquationString(equationInput.value);
     if (equationToGraph) {
-      graphParamsGlobal['equation'] = equationToGraph;
+      graphParamsGlobal['equation'] = equationInput.value;
+      graphParamsGlobal['equationCompiled'] = equationToGraph;
       displayGraph(graphParamsGlobal, document.getElementById('canvas'));
+      setUrlFromParams(graphParamsGlobal);
     }
   }
   catch(err) {
-    return;
+    return 0;
   }
 };
 
-document.getElementById('equation').addEventListener('input', equationChangeHandler);
+equationInput.addEventListener('input', equationChangeHandler);
 
 //////////// Fuzzy value handlers
 
 var updateFuzzy = function(nr, val) {
-  graphParamsGlobal['fuzzyValue'] = (MAX_FUZZY+1) - parseInt(val.value);
+  graphParamsGlobal['fuzzyValue'] = parseInt(val.value);
 	displayGraph(graphParamsGlobal, document.getElementById('canvas'));
+  setUrlFromParams(graphParamsGlobal);
 };
 
 $('#fuzzy-slider').slider({
   range: "min",
   min: 1,
   max: MAX_FUZZY,
-  value: 200 - 50,
+  value: graphParamsGlobal['fuzzyValue'],
   slide: updateFuzzy,
   change: updateFuzzy
 });
@@ -371,9 +435,11 @@ $('#fuzzy-slider').slider({
 
 document.getElementById('zoom-in-btn').onclick = function () {
   zoomIn(graphParamsGlobal, document.getElementById('canvas'));
+  setUrlFromParams(graphParamsGlobal);
 };
 document.getElementById('zoom-out-btn').onclick = function () {
   zoomOut(graphParamsGlobal, document.getElementById('canvas'));
+  setUrlFromParams(graphParamsGlobal);
 };
 
 //////////// Pan handlers
@@ -383,23 +449,24 @@ var dragStart = {};
 var dragStop = {};
 
 canvas.onmousedown = function(e){
-    dragStart.x = e.x;
-    dragStart.y = e.y;
-    mouseIsDown = true;
+  dragStart.x = e.x;
+  dragStart.y = e.y;
+  mouseIsDown = true;
 };
 
 canvas.onmouseup = function(e){
-    mouseIsDown = false;
-    dragStop.x = e.x;
-    dragStop.y = e.y;
-    panGraph(graphParamsGlobal, dragStop.x - dragStart.x, dragStop.y - dragStart.y, document.getElementById('canvas'));
+  mouseIsDown = false;
+  dragStop.x = e.x;
+  dragStop.y = e.y;
+  panGraph(graphParamsGlobal, dragStop.x - dragStart.x, dragStop.y - dragStart.y, document.getElementById('canvas'));
+  setUrlFromParams(graphParamsGlobal);
 };
 
 canvas.onmousemove = function(e){
-    if(!mouseIsDown) return;
-    dragStop.x = e.x;
-    dragStop.y = e.y;
-    return false;
+  if(!mouseIsDown) return;
+  dragStop.x = e.x;
+  dragStop.y = e.y;
+  return false;
 };
 
 //////////// Window resize handling
@@ -416,35 +483,9 @@ window.onresize = function(event) {
   displayGraph(graphParamsGlobal, document.getElementById('canvas'));
 };
 
-/////////////////////////////////////////////////////////////////////////////////////// URL Handling
-
-var getParameterByName = function(name, url) {
-  // Copied from:
-  // http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
-  if (!url) url = window.location.href;
-  name = name.replace(/[\[\]]/g, "\\$&");
-  var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
-      results = regex.exec(url);
-  if (!results) return null;
-  if (!results[2]) return '';
-  return decodeURIComponent(results[2].replace(/\+/g, " "));
-};
-
-var equation_input = document.querySelector('#equation');
-
-// Try to get equation from url
-var urlFragmentId = window.location.hash.substr(1);
-var eqFromUrl = getParameterByName('eq', urlFragmentId);
-
-// Initial conditions
-if (eqFromUrl) {
-  equation_input.value = eqFromUrl;
-} else {
-  equation_input.value = "y^2=x^3 - x + 1";
-}
-
 /////////////////////////////////////////////////////////////////////////////////////////////// Main
 
+// Do initial render
 makeCanvasFullPage();
 displayGraph(graphParamsGlobal, document.getElementById('canvas'));
 
