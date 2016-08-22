@@ -197,6 +197,7 @@ var calculateFuncForWindow = function(func, window, canvasWidth, canvasHeight) {
 
   var minValue = 9999999;
   var maxValue = -9999999;
+  var maxCutoff = 100;
   var pixelValues = new Array(canvasWidth * canvasHeight);
 
   // Calculate values for each pixel, and find the min and max values
@@ -205,6 +206,7 @@ var calculateFuncForWindow = function(func, window, canvasWidth, canvasHeight) {
       var x = pixel_to_x_mapper(pixelX);
       var y = pixel_to_y_mapper(pixelY);
       var result = func(x, y);
+      result = Math.min(result, maxCutoff);
       if (result > maxValue) {
         maxValue = result;
       }
